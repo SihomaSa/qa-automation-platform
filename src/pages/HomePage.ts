@@ -46,37 +46,43 @@ export class HomePage extends BasePage {
 
   async searchProduct(query: string): Promise<void> {
     // #search_product is on /products, not the home page.
-    await this.goto('/products')
+    // Retry up to 3 times in case the site returns a rate-limit page
+    // ("too many people accessing") instead of the real /products page.
+    const MAX_ATTEMPTS = 3
+    let lastError = ''
 
-    // Wait for 'load' (not just domcontentloaded) so the search form is rendered.
-    // Catch in case ads/trackers cause networkidle to never settle.
-    await this.page.waitForLoadState('load', { timeout: 30000 }).catch(() => {})
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      await this.goto('/products')
+      await this.page.waitForLoadState('load', { timeout: 30000 }).catch(() => {})
+      await this.page.waitForTimeout(1500)
+      await this.dismissOverlays()
 
-    // Give ads a moment to appear so dismissOverlays() can catch them.
-    await this.page.waitForTimeout(1500)
-    await this.dismissOverlays()
+      // Use evaluate() to bypass ad-overlay occlusion that blocks Playwright's
+      // visibility checks. Returns false when the page is a rate-limit splash.
+      const filled = await this.page.evaluate((q) => {
+        const input = document.getElementById('search_product') as HTMLInputElement | null
+        const button = document.getElementById('submit_search') as HTMLButtonElement | null
+        if (!input) return false
+        input.value = q
+        input.dispatchEvent(new Event('input', { bubbles: true }))
+        input.dispatchEvent(new Event('change', { bubbles: true }))
+        button?.click()
+        return true
+      }, query)
 
-    // Interact via JS to bypass any overlay occlusion:
-    // waitFor({ state: 'visible' }) fails when the element is in the DOM but
-    // hidden behind an ad iframe — evaluate() ignores occlusion entirely.
-    const filled = await this.page.evaluate((q) => {
-      const input = document.getElementById('search_product') as HTMLInputElement | null
-      const button = document.getElementById('submit_search') as HTMLButtonElement | null
-      if (!input) return false
-      input.value = q
-      input.dispatchEvent(new Event('input', { bubbles: true }))
-      input.dispatchEvent(new Event('change', { bubbles: true }))
-      button?.click()
-      return true
-    }, query)
+      if (filled) {
+        // URL becomes /products?search=... and cards render under .productinfo
+        await this.page.waitForURL(/search=/, { timeout: 30000 })
+        await this.page.locator('.productinfo').first().waitFor({ state: 'visible', timeout: 15000 })
+        return
+      }
 
-    if (!filled) {
-      throw new Error('#search_product not found in DOM on /products page')
+      lastError = `attempt ${attempt}: #search_product not found — site may be rate-limiting`
+      console.warn(`[WARN] searchProduct ${lastError}`)
+      if (attempt < MAX_ATTEMPTS) await this.page.waitForTimeout(4000)
     }
 
-    // URL becomes /products?search=... and product cards render under .productinfo
-    await this.page.waitForURL(/search=/, { timeout: 30000 })
-    await this.page.locator('.productinfo').first().waitFor({ state: 'visible', timeout: 15000 })
+    throw new Error(`searchProduct failed after ${MAX_ATTEMPTS} attempts. Last: ${lastError}`)
   }
 
   async navigateToLogin(): Promise<void> {

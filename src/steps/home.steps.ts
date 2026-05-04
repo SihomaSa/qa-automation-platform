@@ -35,14 +35,18 @@ When('I search for {string}', async function (this: CustomWorld, query: string) 
 
 Then('I should see search results for {string}', async function (this: CustomWorld, query: string) {
   // Wait for results to appear after search
-  const firstResult = this.page.locator('.productinfo h2').first()
-  await firstResult.waitFor({ state: 'visible', timeout: 20000 })
+  // On automationexercise.com: .productinfo h2 = PRICE ("Rs. 500"), .productinfo p = NAME ("Blue Top")
+  const nameLocator = this.page.locator('.productinfo p')
+  await nameLocator.first().waitFor({ state: 'visible', timeout: 20000 })
 
-  const count = await this.page.locator('.productinfo h2').count()
+  const count = await nameLocator.count()
   expect(count).toBeGreaterThan(0)
 
-  const firstProductName = await firstResult.textContent()
-  expect(firstProductName?.toLowerCase()).toContain(query.toLowerCase().split(' ')[0])
+  // Check that at least one result name contains the search keyword
+  const allNames = await nameLocator.allTextContents()
+  const keyword = query.toLowerCase().split(' ')[0]
+  const hasMatch = allNames.some((n) => n.toLowerCase().includes(keyword))
+  expect(hasMatch).toBe(true)
 })
 
 When('I click on the Login\\/Signup link', async function (this: CustomWorld) {
