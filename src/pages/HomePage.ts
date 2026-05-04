@@ -45,17 +45,36 @@ export class HomePage extends BasePage {
   }
 
   async searchProduct(query: string): Promise<void> {
-    // #search_product exists on /products, not on the home page —
-    // navigate there first before interacting with the search bar.
+    // #search_product is on /products, not the home page.
     await this.goto('/products')
-    await this.waitForLoad()
+
+    // Wait for 'load' (not just domcontentloaded) so the search form is rendered.
+    // Catch in case ads/trackers cause networkidle to never settle.
+    await this.page.waitForLoadState('load', { timeout: 30000 }).catch(() => {})
+
+    // Give ads a moment to appear so dismissOverlays() can catch them.
+    await this.page.waitForTimeout(1500)
     await this.dismissOverlays()
-    await this.searchInput.waitFor({ state: 'visible', timeout: 20000 })
-    await this.searchInput.scrollIntoViewIfNeeded()
-    await this.searchInput.click()
-    await this.searchInput.fill(query)
-    await this.searchButton.click()
-    // After submit the URL becomes /products?search=... and results render in .productinfo cards
+
+    // Interact via JS to bypass any overlay occlusion:
+    // waitFor({ state: 'visible' }) fails when the element is in the DOM but
+    // hidden behind an ad iframe — evaluate() ignores occlusion entirely.
+    const filled = await this.page.evaluate((q) => {
+      const input = document.getElementById('search_product') as HTMLInputElement | null
+      const button = document.getElementById('submit_search') as HTMLButtonElement | null
+      if (!input) return false
+      input.value = q
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      input.dispatchEvent(new Event('change', { bubbles: true }))
+      button?.click()
+      return true
+    }, query)
+
+    if (!filled) {
+      throw new Error('#search_product not found in DOM on /products page')
+    }
+
+    // URL becomes /products?search=... and product cards render under .productinfo
     await this.page.waitForURL(/search=/, { timeout: 30000 })
     await this.page.locator('.productinfo').first().waitFor({ state: 'visible', timeout: 15000 })
   }

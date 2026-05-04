@@ -10,9 +10,9 @@ Given('I am on the home page', async function (this: CustomWorld) {
 })
 
 Then('the page title should contain {string}', async function (this: CustomWorld, title: string) {
-  const homePage = this.get<HomePage>('homePage')
-  const actualTitle = await homePage.getTitle()
-  expect(actualTitle).toContain(title)
+  // Use toHaveTitle — it auto-retries until the title is set (domcontentloaded
+  // fires before JS may set the <title>, so a plain getTitle() can return "").
+  await expect(this.page).toHaveTitle(new RegExp(title, 'i'), { timeout: 30000 })
 })
 
 Then('the navigation bar should be visible', async function (this: CustomWorld) {
