@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    # Nightly regression run at 02:00 UTC
     - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
@@ -18,7 +17,7 @@ on:
         options: [all, e2e, api, smoke]
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
 
 jobs:
   lint-and-type-check:
@@ -26,12 +25,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-
       - run: npm ci
       - run: npm run type-check
       - run: npm run lint
@@ -42,19 +39,15 @@ jobs:
     needs: lint-and-type-check
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-
       - run: npm ci
-
       - name: Run API tests
         run: npm run test:api
         env:
           API_BASE_URL: ${{ vars.API_BASE_URL || 'https://automationexercise.com/api' }}
-
       - name: Upload API test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -64,6 +57,7 @@ jobs:
             reports/
             allure-results/
           retention-days: 14
+          if-no-files-found: warn
 
   e2e-tests:
     name: E2E Tests (${{ matrix.browser }})
@@ -73,20 +67,15 @@ jobs:
       fail-fast: false
       matrix:
         browser: [chromium, firefox]
-
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-
       - run: npm ci
-
       - name: Install Playwright browsers
         run: npx playwright install --with-deps ${{ matrix.browser }}
-
       - name: Run E2E tests
         run: npm run test:e2e
         env:
@@ -95,7 +84,6 @@ jobs:
           BASE_URL: ${{ vars.BASE_URL || 'https://automationexercise.com' }}
           SCREENSHOT_ON_FAIL: 'true'
           VIDEO_ON_FAIL: 'true'
-
       - name: Upload E2E results
         if: always()
         uses: actions/upload-artifact@v4
@@ -105,6 +93,7 @@ jobs:
             reports/
             allure-results/
           retention-days: 14
+          if-no-files-found: warn
 
   allure-report:
     name: Generate Allure Report
@@ -113,17 +102,19 @@ jobs:
     if: always()
     steps:
       - uses: actions/checkout@v4
-
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: all-results
-
+        continue-on-error: true
       - name: Merge allure results
         run: |
-          mkdir -p allure-results
-          find all-results -name "*.json" -path "*/allure-results/*" -exec cp {} allure-results/ \;
-
+          mkdir -p allure-results all-results
+          find all-results -name "*.json" -path "*/allure-results/*" -exec cp {} allure-results/ \; || true
+          if [ -z "$(ls -A allure-results)" ]; then
+            echo '{"uuid":"placeholder","name":"No results","status":"skipped","stage":"finished"}' \
+              > allure-results/placeholder-result.json
+          fi
       - name: Generate Allure Report
         uses: simple-elf/allure-report-action@master
         with:
@@ -131,7 +122,6 @@ jobs:
           allure_report: allure-report
           gh_pages: gh-pages
           allure_history: allure-history
-
       - name: Deploy to GitHub Pages
         if: github.ref == 'refs/heads/main'
         uses: peaceiris/actions-gh-pages@v3
