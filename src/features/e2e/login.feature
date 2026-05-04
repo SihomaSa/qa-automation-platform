@@ -9,7 +9,7 @@ Feature: User Authentication
 
   @e2e @regression
   Scenario: Login fails with invalid credentials
-    When I log in with email "wrong@example.com" and password "wrongpass"
+    When I log in with email "no_such_user_xyz99@fakemaildomain987.io" and password "wrongpass"
     Then I should see an error message "Your email or password is incorrect!"
 
   @e2e @regression

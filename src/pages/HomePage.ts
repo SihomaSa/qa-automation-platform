@@ -55,7 +55,9 @@ export class HomePage extends BasePage {
     await this.searchInput.click()
     await this.searchInput.fill(query)
     await this.searchButton.click()
-    await this.page.waitForSelector('#search-products', { timeout: 30000 })
+    // After submit the URL becomes /products?search=... and results render in .productinfo cards
+    await this.page.waitForURL(/search=/, { timeout: 30000 })
+    await this.page.locator('.productinfo').first().waitFor({ state: 'visible', timeout: 15000 })
   }
 
   async navigateToLogin(): Promise<void> {

@@ -46,20 +46,25 @@ export class LoginPage extends BasePage {
    * We wait explicitly for that element so we never fall back to unrelated paragraphs.
    */
   async getErrorMessage(): Promise<string> {
-    // Primary: wait for the red-coloured server-side error paragraph
+    // Guard: if login succeeded the page navigates away from /login — no error to read.
+    const url = this.page.url()
+    if (!url.includes('/login')) {
+      console.log(`[DEBUG] getErrorMessage called but page is at ${url} (login succeeded?)`)
+      return ''
+    }
+
+    // Primary: wait for the red server-side error paragraph inside the form
     try {
-      const errorEl = this.page.locator('p[style*="color: red"], p[style*="color:red"]')
+      const errorEl = this.page.locator('form[action="/login"] p[style*="color"]')
       await errorEl.waitFor({ state: 'visible', timeout: 8000 })
       return (await errorEl.first().textContent())?.trim() ?? ''
-    } catch { /* not present, try next */ }
+    } catch { /* not present, try broader selectors */ }
 
-    // Fallback: any <p> inside the login form
+    // Broader: any red-coloured <p> anywhere on the page
     try {
-      const formError = this.page.locator('form[action="/login"] p')
-      const count = await formError.count()
-      if (count > 0) {
-        return (await formError.first().textContent())?.trim() ?? ''
-      }
+      const anyRed = this.page.locator('p[style*="color: red"], p[style*="color:red"]')
+      await anyRed.waitFor({ state: 'visible', timeout: 3000 })
+      return (await anyRed.first().textContent())?.trim() ?? ''
     } catch { /* not present */ }
 
     // Last resort: dump all visible paragraph text for debugging
@@ -71,7 +76,6 @@ export class LoginPage extends BasePage {
     )
     console.log('[DEBUG] All visible <p> on login page after submit:', allP)
 
-    // Return a paragraph that contains "incorrect", else first available
     return allP.find((t) => t && t.toLowerCase().includes('incorrect')) ?? allP[0] ?? ''
   }
 
