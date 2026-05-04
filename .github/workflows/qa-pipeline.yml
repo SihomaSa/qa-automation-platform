@@ -142,7 +142,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [api-tests, e2e-tests]
     # Only run if SLACK_WEBHOOK_URL secret is configured
-    if: always() && github.ref == 'refs/heads/main' && vars.SLACK_ENABLED == 'true'
+    if: always() && github.ref == 'refs/heads/main'
     steps:
       - name: Notify on failure
         if: contains(needs.*.result, 'failure')
