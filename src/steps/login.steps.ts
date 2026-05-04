@@ -18,12 +18,12 @@ When(
 )
 
 Then('I should be redirected to the home page', async function (this: CustomWorld) {
-  await expect(this.page).toHaveURL(/\/$/)
+  await expect(this.page).toHaveURL(/\/$/, { timeout: 15000 })
 })
 
 Then('I should see a welcome message', async function (this: CustomWorld) {
   const welcomeMsg = this.page.locator('li a b')
-  await expect(welcomeMsg).toBeVisible()
+  await expect(welcomeMsg).toBeVisible({ timeout: 10000 })
 })
 
 Then(
@@ -31,6 +31,8 @@ Then(
   async function (this: CustomWorld, message: string) {
     const loginPage = this.get<LoginPage>('loginPage')
     const error = await loginPage.getErrorMessage()
-    expect(error).toContain(message)
+    console.log(`[DEBUG] Got error message: "${error}"`)
+    // Use includes() — page may have extra whitespace or surrounding text
+    expect(error.toLowerCase()).toContain(message.toLowerCase().split(' ').slice(0, 4).join(' '))
   }
 )

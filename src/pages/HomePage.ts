@@ -2,14 +2,14 @@ import { Page } from '@playwright/test'
 import { BasePage } from './BasePage'
 
 export class HomePage extends BasePage {
+  // Use id-based selectors — most stable against overlay/ad interference
   readonly logo = this.page.locator('img[alt="Website for automation practice"]')
-  readonly searchInput = this.page.getByPlaceholder('Search Product')
+  readonly searchInput = this.page.locator('#search_product')   // actual id on the site
   readonly searchButton = this.page.locator('#submit_search')
   readonly navBar = this.page.locator('#header')
   readonly loginLink = this.page.locator('a[href="/login"]')
   readonly cartLink = this.page.locator('a[href="/view_cart"]')
   readonly productCards = this.page.locator('.product-image-wrapper')
-  readonly searchResults = this.page.locator('#search-products .product-image-wrapper')
 
   constructor(page: Page) {
     super(page)
@@ -18,12 +18,39 @@ export class HomePage extends BasePage {
   async open(): Promise<void> {
     await this.goto('/')
     await this.waitForLoad()
+    // Dismiss cookie/ad overlay if present
+    await this.dismissOverlays()
+  }
+
+  /** Close any modal or consent overlay that may block inputs */
+  private async dismissOverlays(): Promise<void> {
+    // Common overlay patterns on this site
+    const overlaySelectors = [
+      'button[aria-label="Close"]',
+      '.modal-header .close',
+      '#dismiss-button',
+      '.fc-button-label',            // funding choices consent
+      'button.fc-cta-consent',
+      '[aria-label="Consent"]',
+    ]
+    for (const sel of overlaySelectors) {
+      try {
+        const btn = this.page.locator(sel)
+        if (await btn.isVisible({ timeout: 1500 })) {
+          await btn.click()
+          await this.page.waitForTimeout(300)
+        }
+      } catch { /* not present */ }
+    }
   }
 
   async searchProduct(query: string): Promise<void> {
-    await this.fillInput(this.searchInput, query)
+    // Ensure input is visible and interactable before typing
+    await this.searchInput.waitFor({ state: 'visible', timeout: 20000 })
+    await this.searchInput.scrollIntoViewIfNeeded()
+    await this.searchInput.click()
+    await this.searchInput.fill(query)
     await this.searchButton.click()
-    // Wait for the search results section to appear — not networkidle
     await this.page.waitForSelector('#search-products', { timeout: 30000 })
   }
 
@@ -39,9 +66,5 @@ export class HomePage extends BasePage {
 
   async getFeaturedProductCount(): Promise<number> {
     return this.productCards.count()
-  }
-
-  async isLoaded(): Promise<boolean> {
-    return this.logo.isVisible()
   }
 }
