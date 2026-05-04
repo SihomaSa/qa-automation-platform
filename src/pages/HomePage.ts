@@ -45,7 +45,11 @@ export class HomePage extends BasePage {
   }
 
   async searchProduct(query: string): Promise<void> {
-    // Ensure input is visible and interactable before typing
+    // #search_product exists on /products, not on the home page —
+    // navigate there first before interacting with the search bar.
+    await this.goto('/products')
+    await this.waitForLoad()
+    await this.dismissOverlays()
     await this.searchInput.waitFor({ state: 'visible', timeout: 20000 })
     await this.searchInput.scrollIntoViewIfNeeded()
     await this.searchInput.click()

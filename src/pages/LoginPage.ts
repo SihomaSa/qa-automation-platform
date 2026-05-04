@@ -21,37 +21,46 @@ export class LoginPage extends BasePage {
 
   async login(email: string, password: string): Promise<void> {
     await this.emailInput.waitFor({ state: 'visible', timeout: 15000 })
+
+    // Disable HTML5 native validation so values like "notanemail"
+    // are still submitted to the server (which returns the real error).
+    await this.page.evaluate(() => {
+      const form = document.querySelector('form[action="/login"]') as HTMLFormElement | null
+      if (form) form.noValidate = true
+    })
+
     await this.fillInput(this.emailInput, email)
     await this.fillInput(this.passwordInput, password)
-    await this.loginButton.click()
-    await this.page.waitForLoadState('domcontentloaded')
-    await this.page.waitForTimeout(1500)
+
+    // Use Promise.all so we don't miss a fast navigation before click resolves
+    await Promise.all([
+      this.page.waitForLoadState('domcontentloaded'),
+      this.loginButton.click(),
+    ])
+    await this.page.waitForTimeout(1000)
   }
 
   /**
    * Read error message after failed login.
-   * automationexercise.com shows: <p style="color: red;">Your email or password is incorrect!</p>
-   * We use a broad selector and read ALL paragraph text in the login section.
+   * automationexercise.com renders: <p style="color: red;">Your email or password is incorrect!</p>
+   * We wait explicitly for that element so we never fall back to unrelated paragraphs.
    */
   async getErrorMessage(): Promise<string> {
-    // Try multiple possible selectors the site may use
-    const candidates = [
-      'p[style*="color: red"]',
-      'p[style*="color:red"]',
-      '.login-form p',
-      'form[action="/login"] p',
-      '#form-login p',
-    ]
+    // Primary: wait for the red-coloured server-side error paragraph
+    try {
+      const errorEl = this.page.locator('p[style*="color: red"], p[style*="color:red"]')
+      await errorEl.waitFor({ state: 'visible', timeout: 8000 })
+      return (await errorEl.first().textContent())?.trim() ?? ''
+    } catch { /* not present, try next */ }
 
-    for (const selector of candidates) {
-      try {
-        const el = this.page.locator(selector)
-        const visible = await el.isVisible({ timeout: 3000 })
-        if (visible) {
-          return (await el.first().textContent()) ?? ''
-        }
-      } catch { /* try next */ }
-    }
+    // Fallback: any <p> inside the login form
+    try {
+      const formError = this.page.locator('form[action="/login"] p')
+      const count = await formError.count()
+      if (count > 0) {
+        return (await formError.first().textContent())?.trim() ?? ''
+      }
+    } catch { /* not present */ }
 
     // Last resort: dump all visible paragraph text for debugging
     const allP = await this.page.$$eval('p', (els) =>
@@ -62,7 +71,7 @@ export class LoginPage extends BasePage {
     )
     console.log('[DEBUG] All visible <p> on login page after submit:', allP)
 
-    // Return first non-empty paragraph that sounds like an error
+    // Return a paragraph that contains "incorrect", else first available
     return allP.find((t) => t && t.toLowerCase().includes('incorrect')) ?? allP[0] ?? ''
   }
 
