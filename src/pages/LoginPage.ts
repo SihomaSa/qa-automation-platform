@@ -56,7 +56,7 @@ export class LoginPage extends BasePage {
     // Last resort: dump all visible paragraph text for debugging
     const allP = await this.page.$$eval('p', (els) =>
       els
-        .filter((el) => (el as HTMLElement).offsetParent !== null) // only visible
+        .filter((el) => (el as Element & { offsetParent: Element | null }).offsetParent !== null)
         .map((el) => el.textContent?.trim())
         .filter(Boolean)
     )
