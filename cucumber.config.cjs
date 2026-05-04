@@ -1,19 +1,21 @@
-// cucumber.config.cjs  — CommonJS so Cucumber can load it without extra flags
-// This replaces cucumber.config.ts and works on Windows/Mac/Linux
+// cucumber.config.cjs — CommonJS, works on Windows/Mac/Linux/Node22
 
 const common = {
   require: ['src/steps/**/*.ts', 'src/support/**/*.ts'],
   requireModule: ['ts-node/register', 'tsconfig-paths/register'],
   format: [
     'progress-bar',
-    ['json:reports/cucumber-report.json'],
-    ['html:reports/cucumber-report.html'],
+    // Correct syntax for Node 22 ESM-safe formatters:
+    // use ['formatter', 'output-path'] tuple — NOT 'formatter:path' string
+    ['@cucumber/pretty-formatter'],
+    ['json', 'reports/cucumber-report.json'],
+    ['html', 'reports/cucumber-report.html'],
   ],
-  publishQuiet: true,
+  // publishQuiet deprecated — removed
 }
 
 module.exports = {
-  default: common,          // fallback when no --profile is given
+  default: common,
   e2e: {
     ...common,
     paths: ['src/features/e2e/**/*.feature'],
