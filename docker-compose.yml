@@ -1,0 +1,41 @@
+version: '3.9'
+
+services:
+  qa-tests:
+    build:
+      context: .
+      target: test-runner
+    environment:
+      - HEADLESS=true
+      - BROWSER=${BROWSER:-chromium}
+      - BASE_URL=${BASE_URL:-https://automationexercise.com}
+      - API_BASE_URL=${API_BASE_URL:-https://automationexercise.com/api}
+      - SCREENSHOT_ON_FAIL=true
+      - VIDEO_ON_FAIL=false
+    volumes:
+      - ./reports:/app/reports
+      - ./allure-results:/app/allure-results
+    command: test:all
+
+  qa-smoke:
+    build:
+      context: .
+      target: test-runner
+    environment:
+      - HEADLESS=true
+      - BROWSER=chromium
+      - BASE_URL=${BASE_URL:-https://automationexercise.com}
+    volumes:
+      - ./reports:/app/reports
+      - ./allure-results:/app/allure-results
+    command: test:smoke
+
+  allure:
+    image: frankescobar/allure-docker-service:latest
+    ports:
+      - '5050:5050'
+    volumes:
+      - ./allure-results:/app/allure-results
+    environment:
+      CHECK_RESULTS_EVERY_SECONDS: 3
+      KEEP_HISTORY: 1
