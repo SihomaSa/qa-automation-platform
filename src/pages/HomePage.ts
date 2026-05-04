@@ -6,10 +6,10 @@ export class HomePage extends BasePage {
   readonly searchInput = this.page.getByPlaceholder('Search Product')
   readonly searchButton = this.page.locator('#submit_search')
   readonly navBar = this.page.locator('#header')
-  // Fix: actual link text on automationexercise.com is " Signup / Login"
   readonly loginLink = this.page.locator('a[href="/login"]')
   readonly cartLink = this.page.locator('a[href="/view_cart"]')
   readonly productCards = this.page.locator('.product-image-wrapper')
+  readonly searchResults = this.page.locator('#search-products .product-image-wrapper')
 
   constructor(page: Page) {
     super(page)
@@ -23,7 +23,8 @@ export class HomePage extends BasePage {
   async searchProduct(query: string): Promise<void> {
     await this.fillInput(this.searchInput, query)
     await this.searchButton.click()
-    await this.waitForLoad()
+    // Wait for the search results section to appear — not networkidle
+    await this.page.waitForSelector('#search-products', { timeout: 30000 })
   }
 
   async navigateToLogin(): Promise<void> {

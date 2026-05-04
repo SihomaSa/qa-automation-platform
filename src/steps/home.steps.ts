@@ -22,6 +22,8 @@ Then('the navigation bar should be visible', async function (this: CustomWorld) 
 
 Then('featured products should be displayed', async function (this: CustomWorld) {
   const homePage = this.get<HomePage>('homePage')
+  // Wait for at least one card to be visible
+  await homePage.productCards.first().waitFor({ state: 'visible', timeout: 20000 })
   const count = await homePage.getFeaturedProductCount()
   expect(count).toBeGreaterThan(0)
 })
@@ -32,21 +34,22 @@ When('I search for {string}', async function (this: CustomWorld, query: string) 
 })
 
 Then('I should see search results for {string}', async function (this: CustomWorld, query: string) {
-  const productNames = this.page.locator('.productinfo h2')
-  await productNames.first().waitFor({ state: 'visible', timeout: 15000 })
-  const count = await productNames.count()
+  // Wait for results to appear after search
+  const firstResult = this.page.locator('.productinfo h2').first()
+  await firstResult.waitFor({ state: 'visible', timeout: 20000 })
+
+  const count = await this.page.locator('.productinfo h2').count()
   expect(count).toBeGreaterThan(0)
 
-  const firstProduct = await productNames.first().textContent()
-  expect(firstProduct?.toLowerCase()).toContain(query.toLowerCase().split(' ')[0])
+  const firstProductName = await firstResult.textContent()
+  expect(firstProductName?.toLowerCase()).toContain(query.toLowerCase().split(' ')[0])
 })
 
-// Step text matches EXACTLY what's in the feature file
 When('I click on the Login\\/Signup link', async function (this: CustomWorld) {
   const homePage = this.get<HomePage>('homePage')
   await homePage.navigateToLogin()
 })
 
 Then('I should be on the login page', async function (this: CustomWorld) {
-  await expect(this.page).toHaveURL(/login/, { timeout: 10000 })
+  await expect(this.page).toHaveURL(/login/, { timeout: 15000 })
 })
