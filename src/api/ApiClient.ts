@@ -1,5 +1,4 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios'
-import { env } from '@config/env'
 
 export interface ApiResponse<T = unknown> {
   status: number
@@ -11,26 +10,23 @@ export interface ApiResponse<T = unknown> {
 export class ApiClient {
   private client: AxiosInstance
 
-  constructor(baseURL = env.API_BASE_URL) {
+  constructor(baseURL = process.env.API_BASE_URL || 'https://automationexercise.com/api') {
     this.client = axios.create({
       baseURL,
-      timeout: env.TIMEOUT,
+      timeout: Number(process.env.TIMEOUT) || 30000,
       headers: {
-        'Content-Type': 'application/json',
         Accept: 'application/json',
       },
-      // Don't throw on non-2xx — let tests assert status codes explicitly
+      // Don't throw on non-2xx — tests assert status codes explicitly
       validateStatus: () => true,
     })
 
-    // Request logger
     this.client.interceptors.request.use((config) => {
       config.headers['x-request-start'] = Date.now().toString()
       console.log(`  → ${config.method?.toUpperCase()} ${config.url}`)
       return config
     })
 
-    // Response logger
     this.client.interceptors.response.use((response) => {
       const start = parseInt(response.config.headers['x-request-start'] ?? '0')
       const duration = Date.now() - start
@@ -60,6 +56,15 @@ export class ApiClient {
     return this.toApiResponse(response, start)
   }
 
+  /** POST with application/x-www-form-urlencoded */
+  async postForm<T = unknown>(path: string, fields: Record<string, string>): Promise<ApiResponse<T>> {
+    const start = Date.now()
+    const response = await this.client.post<T>(path, new URLSearchParams(fields), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    })
+    return this.toApiResponse(response, start)
+  }
+
   async put<T = unknown>(path: string, body?: unknown): Promise<ApiResponse<T>> {
     const start = Date.now()
     const response = await this.client.put<T>(path, body)
@@ -73,5 +78,4 @@ export class ApiClient {
   }
 }
 
-// Singleton instance
 export const apiClient = new ApiClient()

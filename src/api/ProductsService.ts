@@ -26,14 +26,15 @@ export class ProductsService {
   async getAllProducts(): Promise<ApiResponse<ProductsResponse>> {
     const response = await apiClient.get<ProductsResponse>('/productsList')
     if (response.status === 200) {
-      ProductsResponseSchema.parse(response.data) // throws if schema mismatch
+      // Validate schema — throws ZodError if API shape changes
+      ProductsResponseSchema.parse(response.data)
     }
     return response
   }
 
   async searchProduct(query: string): Promise<ApiResponse> {
-    const formData = new URLSearchParams({ search_product: query })
-    return apiClient.post('/searchProduct', formData.toString())
+    // API requires form-encoded body, not JSON
+    return apiClient.postForm('/searchProduct', { search_product: query })
   }
 
   async getProductById(id: number): Promise<Product | undefined> {

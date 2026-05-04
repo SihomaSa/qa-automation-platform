@@ -6,15 +6,11 @@ const common = {
   requireModule: ['ts-node/register', 'tsconfig-paths/register'],
   format: [
     'progress-bar',
-    'allure-cucumberjs/reporter',
+    ['json:reports/cucumber-report.json'],
+    ['html:reports/cucumber-report.html'],
   ],
-  formatOptions: {
-    resultsDir: 'allure-results',
-    // links: {                               // ← Comenta o elimina todo esto
-    //   issue: { pattern: 'https://github.com/your-org/your-repo/issues/{}' },
-    // },
-  },
-};
+  publishQuiet: true,
+}
 
 module.exports = {
   default: common,          // fallback when no --profile is given

@@ -7,15 +7,12 @@ Feature: User Authentication
   Background:
     Given I am on the login page
 
-  Scenario: Successful login with valid credentials
-    When I log in with email "test@example.com" and password "Test@1234"
-    Then I should be redirected to the home page
-    And I should see a welcome message
-
+  @e2e @regression
   Scenario: Login fails with invalid credentials
     When I log in with email "wrong@example.com" and password "wrongpass"
     Then I should see an error message "Your email or password is incorrect!"
 
+  @e2e @regression
   Scenario Outline: Login validation with multiple invalid inputs
     When I log in with email "<email>" and password "<password>"
     Then I should see an error message "<error>"

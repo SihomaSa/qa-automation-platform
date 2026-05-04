@@ -7,7 +7,6 @@ import {
   ITestCaseHookParameter,
 } from '@cucumber/cucumber'
 import { CustomWorld } from './world'
-import { env } from '@config/env'
 import * as fs from 'fs'
 import * as path from 'path'
 
@@ -17,25 +16,27 @@ BeforeAll(async function () {
   dirs.forEach((dir) => fs.mkdirSync(dir, { recursive: true }))
 })
 
-// Skip browser init for API-only scenarios
-Before({ tags: 'not @api-only' }, async function (this: CustomWorld) {
+// Only launch browser for @e2e scenarios
+Before({ tags: '@e2e' }, async function (this: CustomWorld) {
   await this.init()
 })
 
-// Capture screenshot + attach to report on failure
-After({ tags: 'not @api-only' }, async function (
+// Capture screenshot + attach to report on failure — only for @e2e
+After({ tags: '@e2e' }, async function (
   this: CustomWorld,
   scenario: ITestCaseHookParameter
 ) {
   if (scenario.result?.status === Status.FAILED) {
-    if (env.SCREENSHOT_ON_FAIL) {
-      const screenshotName = `${scenario.pickle.name.replace(/\s+/g, '_')}_${Date.now()}.png`
-      const screenshotPath = path.join('reports/screenshots', screenshotName)
+    const screenshotOnFail = process.env.SCREENSHOT_ON_FAIL !== 'false'
 
-      const screenshot = await this.page?.screenshot({ path: screenshotPath, fullPage: true })
-
-      if (screenshot) {
+    if (screenshotOnFail && this.page) {
+      try {
+        const screenshotName = `${scenario.pickle.name.replace(/\s+/g, '_')}_${Date.now()}.png`
+        const screenshotPath = path.join('reports/screenshots', screenshotName)
+        const screenshot = await this.page.screenshot({ path: screenshotPath, fullPage: true })
         await this.attach(screenshot, 'image/png')
+      } catch {
+        // screenshot failed — non-fatal
       }
     }
 

@@ -7,18 +7,18 @@ Feature: Home Page
   Background:
     Given I am on the home page
 
-  @smoke
+  @e2e @smoke
   Scenario: Home page loads successfully
     Then the page title should contain "Automation Exercise"
     And the navigation bar should be visible
     And featured products should be displayed
 
-  @regression
+  @e2e @regression
   Scenario: Search for a product from the home page
     When I search for "Blue Top"
     Then I should see search results for "Blue Top"
 
-  @regression
+  @e2e @regression
   Scenario: Navigate to login page
     When I click on the Login/Signup link
     Then I should be on the login page
