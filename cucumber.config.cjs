@@ -1,17 +1,14 @@
-// cucumber.config.cjs — CommonJS, works on Windows/Mac/Linux/Node22
+// cucumber.config.cjs — CommonJS, Node 22 compatible, no external formatters
 
 const common = {
   require: ['src/steps/**/*.ts', 'src/support/**/*.ts'],
   requireModule: ['ts-node/register', 'tsconfig-paths/register'],
   format: [
+    // Built-in formatters only — no external packages needed
     'progress-bar',
-    // Correct syntax for Node 22 ESM-safe formatters:
-    // use ['formatter', 'output-path'] tuple — NOT 'formatter:path' string
-    ['@cucumber/pretty-formatter'],
     ['json', 'reports/cucumber-report.json'],
     ['html', 'reports/cucumber-report.html'],
   ],
-  // publishQuiet deprecated — removed
 }
 
 module.exports = {
