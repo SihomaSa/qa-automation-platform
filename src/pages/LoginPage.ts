@@ -6,7 +6,8 @@ export class LoginPage extends BasePage {
   readonly emailInput = this.page.locator('[data-qa="login-email"]')
   readonly passwordInput = this.page.locator('[data-qa="login-password"]')
   readonly loginButton = this.page.locator('[data-qa="login-button"]')
-  readonly errorMessage = this.page.locator('p[style*="color: red"]')
+  // Fix: error message selector on automationexercise.com
+  readonly errorMessage = this.page.locator('form p').filter({ hasText: 'incorrect' })
 
   readonly signupNameInput = this.page.locator('[data-qa="signup-name"]')
   readonly signupEmailInput = this.page.locator('[data-qa="signup-email"]')
@@ -25,7 +26,10 @@ export class LoginPage extends BasePage {
     await this.fillInput(this.emailInput, email)
     await this.fillInput(this.passwordInput, password)
     await this.loginButton.click()
-    await this.waitForLoad()
+    // Wait for response — either redirect or error message appears
+    await this.page.waitForLoadState('domcontentloaded')
+    // Small wait for error message to render
+    await this.page.waitForTimeout(1000)
   }
 
   async getErrorMessage(): Promise<string> {

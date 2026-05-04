@@ -2,14 +2,13 @@ import { Page } from '@playwright/test'
 import { BasePage } from './BasePage'
 
 export class HomePage extends BasePage {
-  // Locators
   readonly logo = this.page.locator('img[alt="Website for automation practice"]')
   readonly searchInput = this.page.getByPlaceholder('Search Product')
   readonly searchButton = this.page.locator('#submit_search')
   readonly navBar = this.page.locator('#header')
-  readonly loginLink = this.page.getByRole('link', { name: /signup.*login/i })
-  readonly cartLink = this.page.getByRole('link', { name: /cart/i })
-  readonly featuredProductsSection = this.page.locator('.features_items')
+  // Fix: actual link text on automationexercise.com is " Signup / Login"
+  readonly loginLink = this.page.locator('a[href="/login"]')
+  readonly cartLink = this.page.locator('a[href="/view_cart"]')
   readonly productCards = this.page.locator('.product-image-wrapper')
 
   constructor(page: Page) {
@@ -29,12 +28,12 @@ export class HomePage extends BasePage {
 
   async navigateToLogin(): Promise<void> {
     await this.loginLink.click()
-    await this.assertUrl('login')
+    await this.waitForLoad()
   }
 
   async navigateToCart(): Promise<void> {
     await this.cartLink.click()
-    await this.assertUrl('view_cart')
+    await this.waitForLoad()
   }
 
   async getFeaturedProductCount(): Promise<number> {

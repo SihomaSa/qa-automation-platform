@@ -1,14 +1,14 @@
-// cucumber.config.cjs — CommonJS, Node 22 compatible, no external formatters
+// cucumber.config.cjs — CommonJS, Node 22 compatible
 
 const common = {
   require: ['src/steps/**/*.ts', 'src/support/**/*.ts'],
   requireModule: ['ts-node/register', 'tsconfig-paths/register'],
   format: [
-    // Built-in formatters only — no external packages needed
     'progress-bar',
     ['json', 'reports/cucumber-report.json'],
     ['html', 'reports/cucumber-report.html'],
   ],
+  timeout: 60000,   // 60s per step — remote site can be slow
 }
 
 module.exports = {

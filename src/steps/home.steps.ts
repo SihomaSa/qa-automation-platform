@@ -33,19 +33,20 @@ When('I search for {string}', async function (this: CustomWorld, query: string) 
 
 Then('I should see search results for {string}', async function (this: CustomWorld, query: string) {
   const productNames = this.page.locator('.productinfo h2')
+  await productNames.first().waitFor({ state: 'visible', timeout: 15000 })
   const count = await productNames.count()
   expect(count).toBeGreaterThan(0)
 
-  // Verify at least one result matches
   const firstProduct = await productNames.first().textContent()
   expect(firstProduct?.toLowerCase()).toContain(query.toLowerCase().split(' ')[0])
 })
 
-When('I click on the Login/Signup link', async function (this: CustomWorld) {
+// Step text matches EXACTLY what's in the feature file
+When('I click on the Login\\/Signup link', async function (this: CustomWorld) {
   const homePage = this.get<HomePage>('homePage')
   await homePage.navigateToLogin()
 })
 
 Then('I should be on the login page', async function (this: CustomWorld) {
-  await expect(this.page).toHaveURL(/login/)
+  await expect(this.page).toHaveURL(/login/, { timeout: 10000 })
 })
